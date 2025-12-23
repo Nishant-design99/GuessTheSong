@@ -1,19 +1,41 @@
 import { useState, useRef, useEffect } from 'react';
 import YouTube from 'react-youtube';
-import { Play, Eye, HelpCircle, Music2, Plus } from 'lucide-react';
+import { Play, Eye, HelpCircle, Music2, Plus, ShieldCheck, Smartphone } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
     const [isPlayingHint, setIsPlayingHint] = useState(false);
     const [hintTime, setHintTime] = useState(0); // Tracks current playback position for hints
+    const [isVerifyVisible, setIsVerifyVisible] = useState(false); // Host verification toggle
+    const [isQRVisible, setIsQRVisible] = useState(false); // Remote host QR code toggle
     const playerRef = useRef(null);
     const timeoutRef = useRef(null);
+
+    // Generate Host URL
+    // Generate Host URL
+    const hostUrl = (() => {
+        try {
+            // Safe encoding for Unicode (Hindi) characters
+            const safeEncode = (str) => btoa(unescape(encodeURIComponent(str)));
+
+            const q = safeEncode(roundData.questionLines[1]);
+            const a = safeEncode(roundData.answerLine);
+            const baseUrl = window.location.href.split('?')[0];
+            return `${baseUrl}?mode=host&q=${q}&a=${a}`;
+        } catch (e) {
+            console.error("QR Gen Error", e);
+            return '';
+        }
+    })();
 
     // Reset state when round changes
     useEffect(() => {
         setIsPlayingHint(false);
         setHintTime(0);
+        setIsVerifyVisible(false);
+        setIsQRVisible(false);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }, [roundData]);
 
@@ -70,7 +92,75 @@ const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
                 </div>
             </header>
 
-            <div className="flex-1 flex flex-col items-center justify-center text-center z-10">
+            <div className="flex-1 flex flex-col items-center justify-center text-center z-10 relative">
+                {/* Host Tools: Verify Answer & Remote */}
+                <div className="absolute top-0 right-0 z-50 flex flex-col items-end gap-2">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setIsQRVisible(!isQRVisible)}
+                            className={clsx(
+                                "p-2 transition-colors rounded-full hover:bg-white/10",
+                                isQRVisible ? "text-cyan-400 bg-white/10" : "text-white/20 hover:text-white/80"
+                            )}
+                            title="Host: Remote Companion"
+                        >
+                            <Smartphone size={20} />
+                        </button>
+                        <button
+                            onClick={() => setIsVerifyVisible(!isVerifyVisible)}
+                            className={clsx(
+                                "p-2 transition-colors rounded-full hover:bg-white/10",
+                                isVerifyVisible ? "text-cyan-400 bg-white/10" : "text-white/20 hover:text-white/80"
+                            )}
+                            title="Host: Verify Answer"
+                        >
+                            <ShieldCheck size={20} />
+                        </button>
+                    </div>
+
+                    <AnimatePresence>
+                        {isQRVisible && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, x: 20 }}
+                                className="bg-white p-4 rounded-xl shadow-2xl origin-top-right mb-2"
+                            >
+                                <div className="mb-2 text-center text-black/60 text-xs font-bold uppercase tracking-widest">
+                                    Scan for Answer
+                                </div>
+                                <div className="bg-white rounded-lg overflow-hidden">
+                                    <QRCodeSVG value={hostUrl} size={150} />
+                                </div>
+                                <div className="mt-2 text-[10px] text-center text-gray-400 max-w-[150px] leading-tight">
+                                    Open on your phone to see the answer securely.
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {isVerifyVisible && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="bg-black/80 backdrop-blur-md rounded-xl border border-white/10 p-4 max-w-xs text-left shadow-2xl"
+                            >
+                                <div className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2">Host Check</div>
+                                <div className="group cursor-help relative">
+                                    <div className="text-white/0 select-none group-hover:text-white transition-all duration-200 font-bold blur-sm group-hover:blur-0">
+                                        {roundData.answerLine}
+                                    </div>
+                                    <div className="absolute inset-0 flex items-center justify-center text-white/30 text-xs font-mono group-hover:opacity-0 pointer-events-none">
+                                        [HOVER TO REVEAL]
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

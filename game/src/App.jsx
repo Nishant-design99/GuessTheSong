@@ -2,15 +2,24 @@ import { useState, useEffect } from 'react';
 import StartScreen from './components/StartScreen';
 import GameScreen from './components/GameScreen';
 import ResultScreen from './components/ResultScreen';
+import HostScreen from './components/HostScreen';
 import { getRandomSongs, getRoundData } from './utils/songUtils';
 
 function App() {
   const [gameState, setGameState] = useState('start'); // start, playing, result, finished
+  const [isHostMode, setIsHostMode] = useState(false);
   const [rounds, setRounds] = useState(5);
   const [gameSongs, setGameSongs] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [currentRoundData, setCurrentRoundData] = useState(null);
   const [score, setScore] = useState(0); // Kept for future, though manual scoring mentioned
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'host') {
+      setIsHostMode(true);
+    }
+  }, []);
 
   const startGame = (numRounds) => {
     const selectedSongs = getRandomSongs(numRounds);
@@ -47,6 +56,10 @@ function App() {
     setGameSongs([]);
     setCurrentRoundIndex(0);
   };
+
+  if (isHostMode) {
+    return <HostScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
