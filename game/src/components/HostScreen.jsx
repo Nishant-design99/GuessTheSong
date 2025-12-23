@@ -21,6 +21,7 @@ const HostScreen = () => {
             }
         } catch (error) {
             console.error("Failed to decode host data", error);
+            // Optional: Set error state to show on screen
         }
     }, []);
 

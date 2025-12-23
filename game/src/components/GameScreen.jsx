@@ -20,8 +20,8 @@ const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
             // Safe encoding for Unicode (Hindi) characters
             const safeEncode = (str) => btoa(unescape(encodeURIComponent(str)));
 
-            const q = safeEncode(roundData.questionLines[1]);
-            const a = safeEncode(roundData.answerLine);
+            const q = encodeURIComponent(safeEncode(roundData.questionLines[1]));
+            const a = encodeURIComponent(safeEncode(roundData.answerLine));
             const baseUrl = window.location.href.split('?')[0];
             return `${baseUrl}?mode=host&q=${q}&a=${a}`;
         } catch (e) {
