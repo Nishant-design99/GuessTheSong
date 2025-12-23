@@ -13,22 +13,28 @@ const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
     const playerRef = useRef(null);
     const timeoutRef = useRef(null);
 
-    // Generate Host URL
-    // Generate Host URL
+    // Generate Host URL (simplified - sync happens via BroadcastChannel)
     const hostUrl = (() => {
-        try {
-            // Safe encoding for Unicode (Hindi) characters
-            const safeEncode = (str) => btoa(unescape(encodeURIComponent(str)));
-
-            const q = encodeURIComponent(safeEncode(roundData.questionLines[1]));
-            const a = encodeURIComponent(safeEncode(roundData.answerLine));
-            const baseUrl = window.location.href.split('?')[0];
-            return `${baseUrl}?mode=host&q=${q}&a=${a}`;
-        } catch (e) {
-            console.error("QR Gen Error", e);
-            return '';
-        }
+        const baseUrl = window.location.href.split('?')[0];
+        return `${baseUrl}?mode=host`;
     })();
+
+    // Broadcast round data to host companion via BroadcastChannel
+    useEffect(() => {
+        const channel = new BroadcastChannel('guess-the-song-host');
+        channel.postMessage({
+            type: 'ROUND_UPDATE',
+            data: {
+                questionLine: roundData.questionLines[1],
+                answerLine: roundData.answerLine,
+                songName: roundData.songName,
+                movie: roundData.movie,
+                roundNumber: roundNumber,
+                totalRounds: totalRounds
+            }
+        });
+        return () => channel.close();
+    }, [roundData, roundNumber, totalRounds]);
 
     // Reset state when round changes
     useEffect(() => {
@@ -127,13 +133,13 @@ const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
                                 className="bg-white p-4 rounded-xl shadow-2xl origin-top-right mb-2"
                             >
                                 <div className="mb-2 text-center text-black/60 text-xs font-bold uppercase tracking-widest">
-                                    Scan for Answer
+                                    Host Companion
                                 </div>
                                 <div className="bg-white rounded-lg overflow-hidden">
                                     <QRCodeSVG value={hostUrl} size={150} />
                                 </div>
                                 <div className="mt-2 text-[10px] text-center text-gray-400 max-w-[150px] leading-tight">
-                                    Open on your phone to see the answer securely.
+                                    Scan once! Auto-syncs with each round.
                                 </div>
                             </motion.div>
                         )}
