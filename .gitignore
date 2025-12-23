@@ -1,0 +1,16 @@
+node_modules
+.venv
+venv
+dist
+dist-ssr
+*.local
+.vscode
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+game/node_modules
+game/dist
