@@ -11,13 +11,15 @@ const HostScreen = () => {
             const params = new URLSearchParams(window.location.search);
             const q = params.get('q');
             const a = params.get('a');
+            const s = params.get('s');
 
             const safeDecode = (str) => decodeURIComponent(escape(atob(str)));
 
             if (q && a) {
                 setData({
                     question: safeDecode(q),
-                    answer: safeDecode(a)
+                    answer: safeDecode(a),
+                    songName: s ? safeDecode(s) : null
                 });
             }
         } catch (error) {
@@ -26,7 +28,7 @@ const HostScreen = () => {
     }, []);
 
     if (!data) return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950 text-white flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950 text-white flex flex-col items-center justify-center p-6 text-center">
             <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -34,8 +36,8 @@ const HostScreen = () => {
             >
                 <Music2 size={48} className="text-purple-400" />
             </motion.div>
-            <p className="text-white/60 text-lg text-center">Scan QR code from game screen</p>
-            <p className="text-white/40 text-sm mt-2 text-center">to see the answer for each round</p>
+            <p className="text-white/60 text-lg">Scan QR code from game screen</p>
+            <p className="text-white/40 text-sm mt-2">to see the answer for each round</p>
         </div>
     );
 
@@ -87,8 +89,8 @@ const HostScreen = () => {
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
                     className={`rounded-2xl p-5 border backdrop-blur-sm transition-all duration-300 ${showAnswer
-                            ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 shadow-lg shadow-green-500/10'
-                            : 'bg-white/5 border-white/10'
+                        ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 shadow-lg shadow-green-500/10'
+                        : 'bg-white/5 border-white/10'
                         }`}
                 >
                     <div className="flex items-center justify-between mb-3">
@@ -100,26 +102,35 @@ const HostScreen = () => {
                         <button
                             onClick={() => setShowAnswer(!showAnswer)}
                             className={`p-2 rounded-xl transition-all ${showAnswer
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : 'bg-white/10 text-white/60 hover:text-white'
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-white/10 text-white/60 hover:text-white'
                                 }`}
                         >
                             {showAnswer ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
 
-                    <div className="relative min-h-[60px] flex items-center">
+                    <div className="relative min-h-[80px] flex items-center">
                         {showAnswer ? (
-                            <motion.p
+                            <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-2xl font-black text-white leading-tight"
+                                className="w-full"
                             >
-                                {data.answer}
-                            </motion.p>
+                                <div className="text-2xl font-black text-white leading-tight mb-2">
+                                    {data.answer}
+                                </div>
+                                {data.songName && data.songName !== data.answer && (
+                                    <div className="flex items-center gap-2 text-sm text-cyan-400 font-medium">
+                                        <div className="w-1 h-3 bg-cyan-500/50 rounded-full" />
+                                        <span>Song: {data.songName}</span>
+                                    </div>
+                                )}
+                            </motion.div>
                         ) : (
-                            <div className="text-white/20 text-lg">
-                                Tap 👁️ to reveal answer
+                            <div className="text-white/20 text-lg flex items-center gap-2">
+                                <Eye size={20} className="text-white/10" />
+                                Tap to reveal answer
                             </div>
                         )}
                     </div>

@@ -105,7 +105,7 @@ const StartScreen = ({ onStart }) => {
                         <input
                             type="range"
                             min="1"
-                            max="20"
+                            max="100"
                             value={rounds}
                             onChange={(e) => setRounds(parseInt(e.target.value))}
                             className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer 

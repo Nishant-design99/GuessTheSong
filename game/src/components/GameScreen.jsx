@@ -19,8 +19,9 @@ const GameScreen = ({ roundData, roundNumber, totalRounds, onReveal }) => {
             const safeEncode = (str) => btoa(unescape(encodeURIComponent(str)));
             const q = encodeURIComponent(safeEncode(roundData.questionLines[1]));
             const a = encodeURIComponent(safeEncode(roundData.answerLine));
+            const s = encodeURIComponent(safeEncode(roundData.songName));
             const baseUrl = window.location.href.split('?')[0];
-            return `${baseUrl}?mode=host&q=${q}&a=${a}`;
+            return `${baseUrl}?mode=host&q=${q}&a=${a}&s=${s}`;
         } catch (e) {
             console.error("QR Gen Error", e);
             return '';
