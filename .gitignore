@@ -14,3 +14,4 @@ dist-ssr
 *.sw?
 game/node_modules
 game/dist
+game/.env

@@ -7,23 +7,35 @@ const HostScreen = () => {
     const [showAnswer, setShowAnswer] = useState(false);
 
     useEffect(() => {
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const q = params.get('q');
-            const a = params.get('a');
-            const s = params.get('s');
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('room');
 
-            const safeDecode = (str) => decodeURIComponent(escape(atob(str)));
+        if (roomId) {
+            import('../services/firebase').then(({ subscribeToRoom }) => {
+                const unsubscribe = subscribeToRoom(roomId, (roomData) => {
+                    if (roomData && roomData.currentQuestion) {
+                        const qData = roomData.currentQuestion;
+                        // Handle both lyrics and song mode data structures
+                        const questionText = qData.type === 'song'
+                            ? "Listen to the clip"
+                            : (qData.questionLines ? qData.questionLines.join('\n') : "...");
 
-            if (q && a) {
-                setData({
-                    question: safeDecode(q),
-                    answer: safeDecode(a),
-                    songName: s ? safeDecode(s) : null
+                        // For lyrics mode, answer is the missing line. For song mode, it's the song name.
+                        const answerText = qData.type === 'song'
+                            ? qData.songName
+                            : qData.answerLine || qData.songName; // Fallback
+
+                        setData({
+                            question: questionText,
+                            answer: answerText,
+                            songName: qData.songName,
+                            movie: qData.movie,
+                            type: qData.type
+                        });
+                    }
                 });
-            }
-        } catch (error) {
-            console.error("Failed to decode host data", error);
+                return () => unsubscribe();
+            });
         }
     }, []);
 
@@ -79,7 +91,7 @@ const HostScreen = () => {
                         Current Question
                     </h2>
                     <p className="text-lg font-medium text-gray-200 italic leading-relaxed">
-                        "{data.question}..."
+                        "{data.type === 'song' ? "🎵 Listen to the audio clip playing on the main screen." : data.question}"
                     </p>
                 </motion.div>
 

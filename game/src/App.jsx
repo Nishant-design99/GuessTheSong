@@ -1,53 +1,123 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, Trophy, Music, Star } from 'lucide-react';
+import { Trophy, Music, Star, RefreshCw } from 'lucide-react';
 import StartScreen from './components/StartScreen';
 import GameScreen from './components/GameScreen';
 import ResultScreen from './components/ResultScreen';
 import HostScreen from './components/HostScreen';
+import LobbyScreen from './components/LobbyScreen';
+import PlayerScreen from './components/PlayerScreen';
 import { getRandomSongs, getRoundData } from './utils/songUtils';
+import { createRoom, subscribeToRoom, updateGameState, clearBuzzer, clearLockedTeams } from './services/firebase';
 
 function App() {
-  const [gameState, setGameState] = useState('start'); // start, playing, result, finished
+  const [gameState, setGameState] = useState('start'); // start, lobby, playing, result, finished
+
+  // App Modes
   const [isHostMode, setIsHostMode] = useState(false);
+  const [isPlayerMode, setIsPlayerMode] = useState(false);
+  const [isJoinMode, setIsJoinMode] = useState(false);
+
+  // Game Data
+  const [roomId, setRoomId] = useState(null);
+  const [roomData, setRoomData] = useState(null);
   const [rounds, setRounds] = useState(5);
+  const [gameMode, setGameMode] = useState('lyrics'); // lyrics/song
   const [gameSongs, setGameSongs] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [currentRoundData, setCurrentRoundData] = useState(null);
-  const [score, setScore] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'host') {
+    const mode = params.get('mode');
+    const room = params.get('room');
+
+    if (mode === 'host') {
       setIsHostMode(true);
+    } else if (mode === 'player' || mode === 'join') {
+      setIsPlayerMode(true);
+      setRoomId(room);
     }
   }, []);
 
-  const startGame = (numRounds) => {
-    const selectedSongs = getRandomSongs(numRounds);
-    setRounds(numRounds);
-    setGameSongs(selectedSongs);
-    setCurrentRoundIndex(0);
-    prepareRound(selectedSongs[0]);
-    setGameState('playing');
+  // Sync Room Data if Room Exists
+  useEffect(() => {
+    if (roomId) {
+      const unsubscribe = subscribeToRoom(roomId, (data) => {
+        setRoomData(data);
+        if (data && data.gameState) {
+          // Sync local game state with firebase
+          setGameState(data.gameState);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [roomId]);
+
+  // --- HOST ACTIONS ---
+
+  const handleCreateLobby = async (numRounds, mode) => {
+    try {
+      // 1. Create Room
+      const newRoomId = await createRoom('host_user');
+      setRoomId(newRoomId);
+
+      // 2. Setup Local Data
+      setRounds(numRounds);
+      setGameMode(mode);
+      const selectedSongs = getRandomSongs(numRounds);
+      setGameSongs(selectedSongs);
+      setCurrentRoundIndex(0);
+
+      // 3. Move to Lobby
+      setGameState('lobby');
+    } catch (e) {
+      console.error("Failed to create room", e);
+      alert(`Failed to create room: ${e.message}\nPlease check your .env file credentials.`);
+    }
   };
 
-  const prepareRound = (song) => {
-    const data = getRoundData(song);
-    setCurrentRoundData(data);
+  const handleStartGame = () => {
+    // Determine first round
+    if (gameSongs.length > 0) {
+      const firstRound = getRoundData(gameSongs[0], gameMode);
+      setCurrentRoundData(firstRound);
+      // Update Firebase
+      updateGameState(roomId, {
+        gameState: 'playing',
+        currentRound: 1,
+        totalRounds: rounds,
+        currentQuestion: firstRound
+      });
+      setGameState('playing');
+    }
   };
 
   const handleReveal = () => {
     setGameState('result');
+    updateGameState(roomId, { gameState: 'result' });
   };
 
-  const nextRound = () => {
+  const nextRound = async () => {
     if (currentRoundIndex + 1 < gameSongs.length) {
-      setCurrentRoundIndex(prev => prev + 1);
-      prepareRound(gameSongs[currentRoundIndex + 1]);
+      const nextIndex = currentRoundIndex + 1;
+      setCurrentRoundIndex(nextIndex);
+      const nextData = getRoundData(gameSongs[nextIndex], gameMode);
+      setCurrentRoundData(nextData);
+
+      // Reset Firebase stuff
+      await clearBuzzer(roomId);
+      await clearLockedTeams(roomId);
+      await updateGameState(roomId, {
+        gameState: 'playing',
+        currentRound: nextIndex + 1,
+        currentQuestion: nextData
+      });
+
       setGameState('playing');
     } else {
       setGameState('finished');
+      updateGameState(roomId, { gameState: 'finished' });
     }
   };
 
@@ -55,50 +125,32 @@ function App() {
     setGameState('start');
     setGameSongs([]);
     setCurrentRoundIndex(0);
+    setRoomId(null);
+    setRoomData(null);
   };
 
-  if (isHostMode) {
-    return <HostScreen />;
-  }
+  // --- RENDER ---
+
+  if (isHostMode) return <HostScreen />;
+  if (isPlayerMode) return <PlayerScreen />;
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950" />
 
-      {/* Animated orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[100px]"
-        />
-        <motion.div
-          animate={{
-            x: [0, -80, 0],
-            y: [0, 80, 0],
-            scale: [1.2, 1, 1.2]
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-pink-600/25 rounded-full blur-[120px]"
-        />
-        <motion.div
-          animate={{
-            x: [0, 50, 0],
-            y: [0, -30, 0]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/15 rounded-full blur-[150px]"
-        />
-      </div>
-
       {/* Main container */}
       <div className="w-full max-w-[95vw] glass-dark rounded-3xl shadow-2xl overflow-hidden h-[90vh] flex flex-col relative z-10">
-        {gameState === 'start' && <StartScreen onStart={startGame} />}
+
+        {gameState === 'start' && <StartScreen onStart={handleCreateLobby} />}
+
+        {gameState === 'lobby' && roomId && (
+          <LobbyScreen
+            roomId={roomId}
+            roomData={roomData}
+            onStartGame={handleStartGame}
+          />
+        )}
 
         {gameState === 'playing' && currentRoundData && (
           <GameScreen
@@ -106,6 +158,8 @@ function App() {
             roundNumber={currentRoundIndex + 1}
             totalRounds={gameSongs.length}
             onReveal={handleReveal}
+            roomId={roomId}
+            roomData={roomData}
           />
         )}
 
@@ -119,97 +173,39 @@ function App() {
 
         {gameState === 'finished' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 relative overflow-hidden">
-            {/* Celebration background */}
-            <div className="absolute inset-0 pointer-events-none">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute top-[10%] left-[15%] text-5xl"
-              >🎉</motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="absolute top-[15%] right-[20%] text-4xl"
-              >🎊</motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="absolute bottom-[20%] left-[20%] text-4xl"
-              >🏆</motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="absolute bottom-[25%] right-[15%] text-5xl"
-              >⭐</motion.div>
-            </div>
-
-            {/* Trophy icon */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", duration: 0.8 }}
-              className="mb-8"
-            >
-              <div className="p-6 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-full shadow-2xl shadow-orange-500/50">
-                <Trophy size={64} className="text-white" />
-              </div>
-            </motion.div>
-
-            {/* Title */}
+            {/* End Screen Content (Maintained) */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-5xl md:text-7xl font-black mb-4"
+              className="text-6xl font-black text-white mb-8"
             >
-              <span className="gradient-text">Game Complete!</span>
+              Game Over!
             </motion.h1>
 
-            {/* Stats */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex gap-6 mb-8"
-            >
-              <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/10">
-                <div className="text-white/60 text-sm">Rounds Played</div>
-                <div className="text-3xl font-black text-white">{gameSongs.length}</div>
+            {/* Scoreboard */}
+            {roomData?.players && (
+              <div className="w-full max-w-2xl bg-white/10 rounded-2xl p-6 mb-8 max-h-64 overflow-y-auto">
+                {Object.values(roomData.players)
+                  .sort((a, b) => b.score - a.score)
+                  .map((p, i) => (
+                    <div key={i} className="flex justify-between items-center p-4 border-b border-white/10 last:border-0">
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-2xl text-white/50">#{i + 1}</span>
+                        <span className="font-bold text-xl text-white">{p.name}</span>
+                      </div>
+                      <span className="font-bold text-2xl text-yellow-400">{p.score} pts</span>
+                    </div>
+                  ))
+                }
               </div>
-            </motion.div>
+            )}
 
-            {/* Message */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-xl text-white/70 mb-10 flex items-center gap-2"
-            >
-              <Star className="text-yellow-400" size={20} />
-              Thanks for playing! You're a music superstar!
-              <Star className="text-yellow-400" size={20} />
-            </motion.p>
-
-            {/* Play Again Button */}
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={restartGame}
-              className="px-10 py-5 bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 
-                         text-white font-bold text-xl rounded-2xl 
-                         shadow-xl shadow-cyan-500/30
-                         flex items-center gap-3 relative overflow-hidden"
+              className="px-10 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
             >
-              <RefreshCw size={24} />
-              <span>Play Again</span>
-              <div className="absolute inset-0 animate-shimmer" />
-            </motion.button>
+              Play Again
+            </button>
           </div>
         )}
       </div>

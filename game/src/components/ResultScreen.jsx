@@ -73,50 +73,52 @@ const ResultScreen = ({ roundData, onNext, isLast }) => {
             </motion.div>
 
             <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-6 min-h-0 relative z-10">
-                {/* Left: Lyrics Panel */}
-                <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex-[1] glass-dark rounded-2xl overflow-hidden flex flex-col min-h-0"
-                >
-                    <div className="p-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
-                        <h3 className="font-bold text-white/80 uppercase tracking-widest text-sm flex items-center gap-2">
-                            <Sparkles size={16} className="text-yellow-400" />
-                            Full Lyrics
-                        </h3>
-                        <div className="text-xs text-white/40 bg-white/10 px-2 py-1 rounded-full">Scroll to explore</div>
-                    </div>
-
-                    <div
-                        ref={scrollRef}
-                        className="flex-1 overflow-y-auto p-6 text-center space-y-3 custom-scrollbar"
+                {/* Left: Lyrics Panel - ONLY RENDER IF NOT SONG MODE */}
+                {roundData.type !== 'song' && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex-[1] glass-dark rounded-2xl overflow-hidden flex flex-col min-h-0"
                     >
-                        {roundData.allLines.map((line, idx) => {
-                            const isQuestion = idx >= roundData.questionStartIndex && idx < roundData.questionStartIndex + 2;
-                            const isAnswer = idx === roundData.questionStartIndex + 2;
+                        <div className="p-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                            <h3 className="font-bold text-white/80 uppercase tracking-widest text-sm flex items-center gap-2">
+                                <Sparkles size={16} className="text-yellow-400" />
+                                Full Lyrics
+                            </h3>
+                            <div className="text-xs text-white/40 bg-white/10 px-2 py-1 rounded-full">Scroll to explore</div>
+                        </div>
 
-                            return (
-                                <motion.div
-                                    key={idx}
-                                    initial={isAnswer ? { scale: 1.1, opacity: 0 } : { opacity: 0.5 }}
-                                    animate={isAnswer ? { scale: 1, opacity: 1 } : { opacity: isQuestion ? 1 : 0.5 }}
-                                    transition={{ duration: 0.5 }}
-                                    id={isAnswer ? 'answer-highlight' : undefined}
-                                    className={`py-3 px-5 rounded-xl transition-all ${isQuestion
+                        <div
+                            ref={scrollRef}
+                            className="flex-1 overflow-y-auto p-6 text-center space-y-3 custom-scrollbar"
+                        >
+                            {roundData.allLines.map((line, idx) => {
+                                const isQuestion = idx >= roundData.questionStartIndex && idx < roundData.questionStartIndex + 2;
+                                const isAnswer = idx === roundData.questionStartIndex + 2;
+
+                                return (
+                                    <motion.div
+                                        key={idx}
+                                        initial={isAnswer ? { scale: 1.1, opacity: 0 } : { opacity: 0.5 }}
+                                        animate={isAnswer ? { scale: 1, opacity: 1 } : { opacity: isQuestion ? 1 : 0.5 }}
+                                        transition={{ duration: 0.5 }}
+                                        id={isAnswer ? 'answer-highlight' : undefined}
+                                        className={`py-3 px-5 rounded-xl transition-all ${isQuestion
                                             ? 'bg-amber-500/20 text-amber-200 font-semibold border border-amber-500/30 text-lg md:text-xl'
                                             : isAnswer
                                                 ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 text-green-200 font-black text-xl md:text-2xl border-2 border-green-500/50 shadow-lg shadow-green-500/20 my-4'
                                                 : 'text-gray-400 hover:text-white/80 text-base md:text-lg hover:bg-white/5'
-                                        }`}
-                                >
-                                    {isAnswer && <span className="mr-2">✓</span>}
-                                    {line}
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-                </motion.div>
+                                            }`}
+                                    >
+                                        {isAnswer && <span className="mr-2">✓</span>}
+                                        {line}
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Right: Video Player */}
                 <motion.div

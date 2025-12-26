@@ -14,69 +14,7 @@ export const getRandomSongs = (count) => {
     return shuffled.slice(0, Math.min(count, allSongs.length));
 };
 
-export const getRoundData = (song) => {
-    const lyrics = song.lyrics;
-    // split by newline, filter out:
-    // 1. Metadata tags like [ti:Name], [ar:Artist], [al:Album], [00:12.34]
-    // 2. Instrumental markers like (Instrumental), (Music), [Music]
-    // 3. Very short lines or empty lines
-    const lines = lyrics.split('\n')
-        .map(line => line.trim())
-        .filter(line => {
-            if (line.length <= 2) return false;
-            // Filter out LRC tags [00:00.00] or metadata [ar:...]
-            if (/^\[.*\]/.test(line)) return false;
-            // Filter out common metadata identifiers
-            if (line.toLowerCase().includes('ti:') || line.toLowerCase().includes('ar:') || line.toLowerCase().includes('al:')) return false;
-
-            // Filter out song structure and instrumental markers
-            const lowerLine = line.toLowerCase();
-            const markers = [
-                'instrumental', 'music', 'interlude', 'bridge',
-                'chorus', 'verse', 'intro', 'outro', 'repeat', 'solo'
-            ];
-
-            // If the line is JUST a marker like "(Chorus)" or "Chorus:"
-            if (markers.some(m => {
-                const regex = new RegExp(`^[\\[\\(]?${m}[\\]\\)]?:?$`, 'i');
-                return regex.test(lowerLine);
-            })) return false;
-
-            // Filter out lines that are just numbers in brackets like [2]
-            if (/^\[\d+\]$/.test(line)) return false;
-
-            return true;
-        })
-        .map(line => {
-            // Clean up trailing (x2) or (Repeat) etc.
-            return line.replace(/\s*\([\d]?x\d+\)\s*$/i, '')
-                .replace(/\s*\(repeat\)\s*$/i, '')
-                .trim();
-        })
-        .filter(line => line.length > 5); // Final check for length after cleaning
-
-    // Need at least 3 lines to have 2 question lines and 1 answer line
-    if (lines.length < 3) return null;
-
-    // Pick a random index for the first question line
-    // We need i, i+1 (Question) and i+2 (Answer) to be valid indices.
-    // So max starting index is length - 3.
-    let validIndices = [];
-    for (let i = 0; i <= lines.length - 3; i++) {
-        // Ensure lines have some reasonable length to be playable
-        if (lines[i].length > 5 && lines[i + 1].length > 5 && lines[i + 2].length > 2) {
-            validIndices.push(i);
-        }
-    }
-
-    if (validIndices.length === 0) {
-        // Fallback if strict filtering fails
-        if (lines.length >= 3) validIndices = [0];
-        else return null;
-    }
-
-    const questionIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
-
+export const getRoundData = (song, mode = 'lyrics') => {
     // Extract YouTube ID from link
     let youtubeId = '';
     try {
@@ -90,13 +28,79 @@ export const getRoundData = (song) => {
         console.error("Invalid YouTube URL", song.link);
     }
 
+    // MODE: SONG GUESSING
+    // Just return metadata and let the GameScreen play the audio.
+    if (mode === 'song') {
+        return {
+            songName: song.name,
+            movie: song.movie,
+            youtubeId: youtubeId,
+            type: 'song',
+            answerLine: song.name, // The "Answer" is the title itself
+            questionLines: [], // No lyrics needed
+            allLines: []
+        };
+    }
+
+    // MODE: LYRICS GUESSING (Default)
+    const lyrics = song.lyrics;
+
+    // Cleaning logic for lyrics...
+    const lines = lyrics.split('\n')
+        .map(line => line.trim())
+        .filter(line => {
+            if (line.length <= 2) return false;
+            if (/^\[.*\]/.test(line)) return false;
+            if (line.toLowerCase().includes('ti:') ||
+                line.toLowerCase().includes('ar:') ||
+                line.toLowerCase().includes('al:')) return false;
+
+            const lowerLine = line.toLowerCase();
+            const markers = [
+                'instrumental', 'music', 'interlude', 'bridge',
+                'chorus', 'verse', 'intro', 'outro', 'repeat', 'solo'
+            ];
+
+            if (markers.some(m => {
+                const regex = new RegExp(`^[\\[\\(]?${m}[\\]\\)]?:?$`, 'i');
+                return regex.test(lowerLine);
+            })) return false;
+
+            if (/^\[\d+\]$/.test(line)) return false;
+
+            return true;
+        })
+        .map(line => {
+            return line.replace(/\s*\([\d]?x\d+\)\s*$/i, '')
+                .replace(/\s*\(repeat\)\s*$/i, '')
+                .trim();
+        })
+        .filter(line => line.length > 5);
+
+    if (lines.length < 3) return null;
+
+    let validIndices = [];
+    for (let i = 0; i <= lines.length - 3; i++) {
+        if (lines[i].length > 5 && lines[i + 1].length > 5 && lines[i + 2].length > 2) {
+            validIndices.push(i);
+        }
+    }
+
+    if (validIndices.length === 0) {
+        if (lines.length >= 3) validIndices = [0];
+        else return null;
+    }
+
+    const questionIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
+
     return {
         songName: song.name,
         movie: song.movie,
-        questionLines: [lines[questionIndex], lines[questionIndex + 1]], // Array of 2 lines
+        questionLines: [lines[questionIndex], lines[questionIndex + 1]],
         answerLine: lines[questionIndex + 2],
         allLines: lines,
-        questionStartIndex: questionIndex, // Track start index
-        youtubeId: youtubeId
+        questionStartIndex: questionIndex,
+        youtubeId: youtubeId,
+        type: 'lyrics'
     };
 };

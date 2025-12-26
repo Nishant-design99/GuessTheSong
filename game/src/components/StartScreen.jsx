@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Music, Play, Sparkles, Mic2, Volume2 } from 'lucide-react';
+import { Music, Play, Sparkles, Mic2, Volume2, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const StartScreen = ({ onStart }) => {
     const [rounds, setRounds] = useState(5);
+    const [gameMode, setGameMode] = useState('lyrics'); // 'lyrics' or 'song'
 
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
@@ -78,7 +79,7 @@ const StartScreen = ({ onStart }) => {
                 className="text-lg md:text-xl text-white/70 mb-10 max-w-md flex items-center gap-2 justify-center"
             >
                 <Sparkles size={20} className="text-yellow-400" />
-                Complete the lyrics & prove you're the ultimate music fan!
+                Prove you're the ultimate music fan!
                 <Sparkles size={20} className="text-yellow-400" />
             </motion.p>
 
@@ -87,13 +88,40 @@ const StartScreen = ({ onStart }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="w-full max-w-md card-fun p-8 relative z-10"
+                className="w-full max-w-lg card-fun p-8 relative z-10"
             >
+                {/* Mode Selection */}
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                    <button
+                        onClick={() => setGameMode('lyrics')}
+                        className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameMode === 'lyrics'
+                            ? 'bg-purple-500/20 border-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:border-white/20'
+                            }`}
+                    >
+                        <Mic2 size={32} className={gameMode === 'lyrics' ? 'text-purple-400' : 'text-gray-500'} />
+                        <span className="font-bold">Lyrics</span>
+                        <span className="text-[10px] uppercase tracking-wider opacity-60">Read & Guess</span>
+                    </button>
+
+                    <button
+                        onClick={() => setGameMode('song')}
+                        className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${gameMode === 'song'
+                            ? 'bg-cyan-500/20 border-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:border-white/20'
+                            }`}
+                    >
+                        <Radio size={32} className={gameMode === 'song' ? 'text-cyan-400' : 'text-gray-500'} />
+                        <span className="font-bold">Music</span>
+                        <span className="text-[10px] uppercase tracking-wider opacity-60">Listen & Guess</span>
+                    </button>
+                </div>
+
                 {/* Rounds selector */}
                 <div className="mb-8">
                     <label className="flex items-center justify-between text-white text-lg font-semibold mb-4">
                         <span className="flex items-center gap-2">
-                            <Mic2 size={20} className="text-pink-400" />
+                            <Volume2 size={20} className="text-pink-400" />
                             Number of Rounds
                         </span>
                         <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
@@ -133,7 +161,7 @@ const StartScreen = ({ onStart }) => {
                 <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => onStart(rounds)}
+                    onClick={() => onStart(rounds, gameMode)}
                     className="group w-full py-5 text-2xl font-bold rounded-2xl relative overflow-hidden
                                bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 
                                hover:from-emerald-300 hover:via-cyan-400 hover:to-blue-400
@@ -146,17 +174,11 @@ const StartScreen = ({ onStart }) => {
                     >
                         <Play fill="currentColor" size={28} />
                     </motion.div>
-                    <span>LET'S PLAY!</span>
+                    <span>CREATE LOBBY</span>
 
                     {/* Shimmer effect */}
                     <div className="absolute inset-0 animate-shimmer opacity-30" />
                 </motion.button>
-
-                {/* Fun hint */}
-                <div className="mt-6 flex items-center justify-center gap-2 text-white/40 text-sm">
-                    <Volume2 size={16} />
-                    <span>Best played with friends & speakers!</span>
-                </div>
             </motion.div>
         </div>
     );
