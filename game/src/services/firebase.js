@@ -71,7 +71,23 @@ export const clearBuzzer = async (roomId) => {
 };
 
 export const lockTeam = async (roomId, playerId) => {
+    // 1. Lock the current team
     await set(ref(db, `rooms/${roomId}/lockedTeams/${playerId}`), true);
+
+    // 2. Check if ALL teams are now locked
+    const roomRef = ref(db, `rooms/${roomId}`);
+    const snapshot = await get(roomRef);
+    const roomData = snapshot.val();
+
+    if (roomData && roomData.players && roomData.lockedTeams) {
+        const totalPlayers = Object.keys(roomData.players).length;
+        const lockedCount = Object.keys(roomData.lockedTeams).length;
+
+        // If everyone has had a chance and failed, reset the round for everyone
+        if (lockedCount >= totalPlayers) {
+            await set(ref(db, `rooms/${roomId}/lockedTeams`), null);
+        }
+    }
 };
 
 export const clearLockedTeams = async (roomId) => {
